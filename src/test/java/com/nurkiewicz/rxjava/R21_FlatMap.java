@@ -1,7 +1,11 @@
 package com.nurkiewicz.rxjava;
 
+import com.nurkiewicz.rxjava.util.UrlDownloader;
 import com.nurkiewicz.rxjava.util.Urls;
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -14,7 +18,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Ignore
+//@Ignore
 public class R21_FlatMap {
 
 	/**
@@ -28,7 +32,10 @@ public class R21_FlatMap {
 		Flowable<URL> urls = Urls.all();
 
 		//when
-		List<String> bodies = null;  //urls...
+		List<String> bodies = urls.flatMap((URL url) ->
+											 	UrlDownloader.download(url)
+												.subscribeOn(Schedulers.io()))
+												.toList().blockingGet();  //urls...
 
 		//then
 		assertThat(bodies).hasSize(996);
@@ -46,7 +53,16 @@ public class R21_FlatMap {
 		
 		//when
 		//WARNING: URL key in HashMap is a bad idea here
-		Map<URI, String> bodies = null; //urls...
+		
+
+		Map<URI, String> bodies =  urls.flatMap((URL url) ->
+														UrlDownloader.download(url)
+														.subscribeOn(Schedulers.io())
+														.map((String html) -> Pair.of(url, html)))
+														.toMap((Pair<URL, String> myPair) -> myPair.getLeft().toURI(), Pair::getRight)
+														.blockingGet();
+		
+		//Map<URI, String> bodies = null; //urls...
 		
 		//then
 		assertThat(bodies).hasSize(996);
@@ -65,7 +81,12 @@ public class R21_FlatMap {
 		
 		//when
 		//Use UrlDownloader.downloadThrottled()
-		Map<URI, String> bodies = new HashMap<>();
+		Map<URI, String> bodies =  urls.flatMap((URL url) ->
+													UrlDownloader.downloadThrottled(url)
+													.subscribeOn(Schedulers.io())
+													.map((String html) -> Pair.of(url, html)), 10)//limit to 0 connections
+													.toMap((Pair<URL, String> myPair) -> myPair.getLeft().toURI(), Pair::getRight)
+													.blockingGet();
 		
 		//then
 		assertThat(bodies).containsEntry(new URI("http://www.twitter.com"), "<html>www.twitter.com</html>");

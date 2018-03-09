@@ -1,5 +1,6 @@
 package com.nurkiewicz.rxjava;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.nurkiewicz.rxjava.util.Sleeper;
 import io.reactivex.Flowable;
 import io.reactivex.Scheduler;
@@ -11,6 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
@@ -74,11 +78,11 @@ public class R10_SubscribeObserveOn {
 	public void observeOn() throws Exception {
 		//observe on uses new thread pool
 		slowFromCallable()
-				.subscribeOn(Schedulers.io()) //use thread from IO thread pool
+				.subscribeOn(Schedulers.io()) //switch to a thread from IO thread pool
 				.doOnNext(x -> log.info("A: {}", x)) //equivalent to Stream.peek(x -> log.info("A: {}", x)
-				.observeOn(Schedulers.computation()) //switch to the computation thread pool
+				.observeOn(Schedulers.computation()) //switch to a thread from the computation thread pool
 				.doOnNext(x -> log.info("B: {}", x)) //not good idea to do logic here, slows down computation
-				.observeOn(Schedulers.newThread())   //switch to a new thread
+				.observeOn(Schedulers.newThread())   //Creates a new thread
 				.doOnNext(x -> log.info("C: {}", x)) //now runs on new thread from Schedulers.newThread()
 				.subscribe(							//runs on new thread from Schedulers.newThread()
 						x -> log.info("Got: {}", x)
@@ -107,7 +111,12 @@ public class R10_SubscribeObserveOn {
 	 * Hint: ThreadFactoryBuilder
 	 */
 	private Scheduler myCustomScheduler() {
-		return Schedulers.io();
+		final ThreadFactory threadFactory = new ThreadFactoryBuilder()
+												.setNameFormat("CustomExecutor-%d")
+												.build();
+		final ExecutorService eService = Executors.newFixedThreadPool(10,threadFactory);
+		final Scheduler scheduler = Schedulers.from(eService);
+		return scheduler;
 	}
 	
 }

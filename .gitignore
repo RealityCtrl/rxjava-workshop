@@ -9,4 +9,5 @@ out
 .project
 */.target/
 */target/
-*/.settings/*
+.settings
+.settings/*
