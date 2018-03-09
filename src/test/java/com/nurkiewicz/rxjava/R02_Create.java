@@ -17,7 +17,7 @@ import static com.nurkiewicz.rxjava.util.Threads.runInBackground;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.*;
 
-@Ignore
+//@Ignore
 public class R02_Create {
 	
 	private static final Logger log = LoggerFactory.getLogger(R02_Create.class);
@@ -28,7 +28,8 @@ public class R02_Create {
 	@Test
 	public void observableUsingCreate() throws Exception {
 		Observable<String> obs = Observable.create(emitter -> {
-			emitter.onNext("A");
+			emitter.onNext("A"); //for every subscriber emit A
+			emitter.onNext("B"); //for every subscriber emit B
 			emitter.onComplete();
 		});
 		
@@ -57,6 +58,14 @@ public class R02_Create {
 	
 	@Test
 	public void createCanBeBlocking() throws Exception {
+		/*
+		 * Create only executed once there is a subscriber
+		 *  to the observable, obs.subscibe() blocks
+		 * until the observable completes
+		 * 
+		 * lazy computation, similar to Streams execution
+		 * Streams doesn't have windowing etc.
+		 */
 		log.info("Start");
 		Observable<String> obs = Observable.create(sub -> {
 			log.info("In create()");
@@ -88,7 +97,7 @@ public class R02_Create {
 	public void cachingWhenCreateIsInvokedManyTimes() throws Exception {
 		DataSource ds = mock(DataSource.class);
 		
-		Observable<Integer> obs = queryDatabase(ds);
+		Observable<Integer> obs = queryDatabase(ds).cache(); //caches
 		
 		obs.subscribe();
 		obs.subscribe();
@@ -97,6 +106,7 @@ public class R02_Create {
 	}
 	
 	private Observable<Integer> queryDatabase(DataSource ds) {
+		
 		return Observable.create(sub -> {
 			try (Connection conn = ds.getConnection()) {
 				sub.onComplete();
