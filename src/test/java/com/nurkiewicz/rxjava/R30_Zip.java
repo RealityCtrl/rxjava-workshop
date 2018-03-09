@@ -4,8 +4,9 @@ import io.reactivex.Flowable;
 import io.reactivex.subscribers.TestSubscriber;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.apache.commons.lang3.tuple.Pair;
 
-@Ignore
+//@Ignore
 public class R30_Zip {
 
 	public static final Flowable<String> LOREM_IPSUM = Flowable.just("Lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit");
@@ -37,7 +38,10 @@ public class R30_Zip {
 	@Test
 	public void everyThirdWord() throws Exception {
 		//given
-		Flowable<String> everyThirdWord = LOREM_IPSUM;
+		Flowable<String> everyThirdWord = LOREM_IPSUM.zipWith(
+									Flowable.range(1, 3).repeat(), Pair::of)
+									.filter(p -> p.getValue() == 3)
+									.map(Pair::getKey);
 
 		//when
 		final TestSubscriber<String> subscriber = everyThirdWord.test();
