@@ -14,7 +14,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
-@Ignore
+//@Ignore
 public class R50_Retry {
 	
 	private static final Logger log = LoggerFactory.getLogger(R50_Retry.class);
@@ -37,6 +37,9 @@ public class R50_Retry {
 		//when
 		cloudClient
 				.pricing()
+				.doOnError(e -> log.warn("Before "  + e))
+				.retry(3)
+				.doOnError(e -> log.warn("After "  + e))
 				.test();
 		
 		//then
