@@ -7,4 +7,6 @@ classes
 out
 .classpath
 .project
-*/.target
+*/.target/
+*/target/
+*/.settings/*

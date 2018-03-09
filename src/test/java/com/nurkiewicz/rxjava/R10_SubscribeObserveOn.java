@@ -17,7 +17,7 @@ import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-@Ignore
+//@Ignore
 public class R10_SubscribeObserveOn {
 
 	private static final Logger log = LoggerFactory.getLogger(R10_SubscribeObserveOn.class);
@@ -27,11 +27,13 @@ public class R10_SubscribeObserveOn {
 		Flowable<BigDecimal> obs = slowFromCallable();
 
 		obs
-				.subscribeOn(Schedulers.io())
+				.subscribeOn(Schedulers.io()) //use thread pool
 				.subscribe(
 						x -> log.info("Got: {}", x)
 				);
-		Sleeper.sleep(ofMillis(1_100));
+		
+		log.info("After subscribe");
+		Sleeper.sleep(ofMillis(1_100)); //to keep main thread alive till other thread completes
 	}
 
 	@Test
@@ -54,17 +56,31 @@ public class R10_SubscribeObserveOn {
 			return BigDecimal.TEN;
 		});
 	}
+	
+	@Test
+	public void observeOn1() throws Exception {
+		slowFromCallable()
+				.subscribeOn(Schedulers.io()) //subsequent steps happen in context of this thread
+				.doOnNext(x -> log.info("A: {}", x))
+				.doOnNext(x -> log.info("B: {}", x))
+				.doOnNext(x -> log.info("C: {}", x))
+				.subscribe(
+						x -> log.info("Got: {}", x)
+				);
+		Sleeper.sleep(ofMillis(1_100));
+	}
 
 	@Test
 	public void observeOn() throws Exception {
+		//observe on uses new thread pool
 		slowFromCallable()
-				.subscribeOn(Schedulers.io())
-				.doOnNext(x -> log.info("A: {}", x))
-				.observeOn(Schedulers.computation())
-				.doOnNext(x -> log.info("B: {}", x))
-				.observeOn(Schedulers.newThread())
-				.doOnNext(x -> log.info("C: {}", x))
-				.subscribe(
+				.subscribeOn(Schedulers.io()) //use thread from IO thread pool
+				.doOnNext(x -> log.info("A: {}", x)) //equivalent to Stream.peek(x -> log.info("A: {}", x)
+				.observeOn(Schedulers.computation()) //switch to the computation thread pool
+				.doOnNext(x -> log.info("B: {}", x)) //not good idea to do logic here, slows down computation
+				.observeOn(Schedulers.newThread())   //switch to a new thread
+				.doOnNext(x -> log.info("C: {}", x)) //now runs on new thread from Schedulers.newThread()
+				.subscribe(							//runs on new thread from Schedulers.newThread()
 						x -> log.info("Got: {}", x)
 				);
 		Sleeper.sleep(ofMillis(1_100));
